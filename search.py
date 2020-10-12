@@ -99,83 +99,62 @@ def aStarSearch(problem, heuristic=nullHeuristic):
     fringe = util.PriorityQueue()
     return genericSearch(problem, fringe, heuristic)
 
-def getDirection(direction):
-    from game import Directions
-    if direction is 'North':
-        return Directions.NORTH
-    elif direction is 'South':
-        return Directions.SOUTH
-    elif direction is 'East':
-        return Directions.EAST
-    elif direction is 'West':
-        return Directions.WEST
-
-def pushToFringe(fringe, nodeTuple, heuristicCost=None):
+def pushToFringe(problem, fringe, nodeTuple, heuristicCost=None):
+    # If fringe is priority queue, calculate the total cost from the starting node
+    # to the current node tuple
     if isinstance(fringe, util.PriorityQueue):
-        totalCost = nodeTuple[0][2]
+        totalCost = problem.getCostOfActions(nodeTuple[1])
 
-        for parent in nodeTuple[1]:
-            if len(parent) == 3:
-                totalCost += parent[2]
-
+        # If heurisitic cost was provided, add that to the total cost
         if heuristicCost != None:
             totalCost += heuristicCost
 
+        # Add node tuple to the fringe using the totalCost as the priority
         fringe.push(nodeTuple, totalCost)
     else:
         fringe.push(nodeTuple)
 
 def genericSearch(problem, fringe, heuristic=None):
-    for successor in problem.getSuccessors(problem.getStartState()):
-        successorTuple = (successor, [problem.getStartState()])
-        heuristicCost = None if heuristic == None else heuristic(successor[0], problem)
-        pushToFringe(fringe, successorTuple, heuristicCost)
-
-    goalStateTuple = None
-    closedSet = [problem.getStartState()]
-
-    while not fringe.isEmpty():
-        print("")
-        if not isinstance(fringe, util.PriorityQueue):
-            print("Fringe Length:",len(fringe.list))
-        parentTuple = fringe.pop()
-        print("Top Fringe State:",parentTuple[0][0])
-        print("Successors:",problem.getSuccessors(parentTuple[0][0]))
-        print("Closed Set:", closedSet)
-        
-        if not (parentTuple[0][0] in closedSet):
-            closedSet.append(parentTuple[0][0])
-        else:
-            continue
-
-        if problem.isGoalState(parentTuple[0][0]):
-            goalStateTuple = parentTuple
-            break
-
-        successors = problem.getSuccessors(parentTuple[0][0])
-        
-        for successor in successors:
-            if successor[0] in closedSet:
-                continue
-
-            parentsList = parentTuple[1].copy()
-            parentsList.insert(0, parentTuple[0])
-
-            successorTuple = (successor, parentsList)
-            heuristicCost = None if heuristic == None else heuristic(successor[0], problem)
-            pushToFringe(fringe, successorTuple, heuristicCost)
-
+    # The starting state of the problem
+    startState = problem.getStartState()
+    
+    # The set of nodes already visited
+    closedSet = []
+    
+    # The list of actions that lead the agent from the start to the goal
     plan = []
-    if goalStateTuple != None:
-        parentList = goalStateTuple[1]
-        parentList.insert(0, goalStateTuple[0])
-        while len(parentList) > 0:
-            parent = parentList.pop(0)
-            if len(parent) == 3:
-                plan.insert(0, getDirection(parent[1]))
 
-    print("\nPlan:", plan, "\n")
-    return plan
+    # Push the starting state as well as an empty plan into the fringe as a nodeTuple
+    # Heuristic cost will be calculated if a heurisitic function was provided
+    nodeTuple = (startState, plan)
+    heuristicCost = None if heuristic == None else heuristic(startState, problem)
+    pushToFringe(problem, fringe, nodeTuple, heuristicCost)
+
+    while not fringe.isEmpty(): 
+        nodeTuple, plan = fringe.pop()
+        
+        # Don't evaluate a node that has already been visited
+        if not nodeTuple in closedSet:
+            closedSet.append(nodeTuple)
+
+            if problem.isGoalState(nodeTuple):
+                return plan
+            
+            successors = problem.getSuccessors(nodeTuple)
+
+            for successor in successors:
+                # For every successor, get the list of actions that led the agent from the start to this successor
+                successorPlan = plan.copy()
+                successorPlan.append(successor[1])
+                
+                # Create new node tuple for this successor using its state as well as its plan
+                # Heuristic cost will be calculated if a heurisitic function was provided
+                successorTuple = (successor[0], successorPlan)
+                heuristicCost = None if heuristic == None else heuristic(successor[0], problem)
+                pushToFringe(problem, fringe, successorTuple, heuristicCost)
+    
+    # If goal was not achieved return empty plan
+    return []
 
 # Abbreviations
 bfs = breadthFirstSearch
