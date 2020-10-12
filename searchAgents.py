@@ -364,20 +364,45 @@ def cornersHeuristic(state, problem):
     shortest path from the state to a goal of the problem; i.e.  it should be
     admissible (as well as consistent).
     """
-    corners = list(problem.corners).copy()
-    print("corners", corners)
-    walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
-    heuristics = []
+    # Get list of corners in the map
+    corners = list(problem.corners)
 
+    # Heuristic returns 0 at every goal state
+    if state[0] in corners:
+        return 0
+
+    # Remove visited corners from the corners list
     for cornerVisited in state[1]:
         corners.remove(cornerVisited)
     
-    for corner in corners:
-        xy1 = state[0]
-        xy2 = corner
-        heuristics.append(abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1]))
+    heuristic = 0
+    minDistance = 0
+    minCorner = None
+    currentNode = state[0]
 
-    return min(heuristics, default=0)
+    # The heuristic value of any node will be the sum of the shortest manhattan distances to/between the unvisited nodes.
+    # Simply put: Heuristic = distance(current position to closest corner) + distance(closest corner to 2nd closest corner) + ...
+    # This heuristic will also never return a negative value and will always be consistent.
+    while corners:
+        for corner in corners:
+            manhattanDistance = util.manhattanDistance(currentNode, corner)
+
+            # If a corner is identified as closer to the current node, store its distance and coordinates
+            if minCorner is None or manhattanDistance < minDistance:
+                minCorner = corner
+                minDistance = manhattanDistance
+        
+        # Add the distance to the heuristic and make the new current node to be the closest node from the previous for loop
+        heuristic += minDistance
+        currentNode = minCorner
+
+        # Remove the closest node from the corners list since we already have it stores as currentNode for the next for loop.
+        # Also have to reset the distance and coordinates of closet node for the next closest node
+        corners.remove(minCorner)
+        minDistance = 0
+        minCorner = None
+
+    return heuristic
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
